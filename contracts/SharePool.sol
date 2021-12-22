@@ -9,12 +9,12 @@ import "./IReserve.sol";
 // TokenBar is the coolest bar in town. You come in with some Token, and leave with more! The longer you stay, the more Token you get.
 //
 // This contract handles swapping to and from xToken, the staking token.
-contract TokenBar is ERC20{
+contract SharePool is ERC20{
     IERC20 public token;
     IReserve public reserve;
 
     // Define the Token token contract
-    constructor(address _token, address _uniV2Router, address _reserve) ERC20("TokenBar", "xTOKEN"){
+    constructor(address _token, address _reserve) ERC20("TokenBar", "xTOKEN"){
         token = IERC20(_token);
         reserve = IReserve(_reserve);
     }

@@ -12,23 +12,23 @@ abstract contract OlympusLink {
     event Unstake(uint amount);
 
     /// @dev function hook to run before staking
-    function _beforeStake() internal virtual{}
+    function _beforeStake(uint _amount) internal virtual{}
 
     /// @dev function hook to run before unstaking
-    function _beforeUnstake() internal virtual{}
+    function _beforeUnstake(uint _amount) internal virtual{}
 
     /// @dev getter function for stake
     function getStake() external view returns(uint){}
     
     /// @dev stake _amount OHM in olympus for xOHM
     function _stake(uint _amount) internal{
-        _beforeStake();
+        _beforeStake(_amount);
         emit Stake(_amount);
     }
 
     /// @dev unstake _amount OHM in olympus for xOHM
     function _unstake(uint _amount) internal{
-        _beforeUnstake();
+        _beforeUnstake(_amount);
         emit Unstake(_amount);
     }
 

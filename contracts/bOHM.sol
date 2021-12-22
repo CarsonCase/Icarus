@@ -21,8 +21,8 @@ contract bOHM is ERC20{
      */
     function enter(uint _amount) external{
         uint tokens = _amount / priceOracle.basePrice();
+        _mint(msg.sender, tokens);      //is important this is first. Because reserve reads total supply which will include this
         reserve.stake(msg.sender, _amount);
-        _mint(msg.sender, tokens);
     }
 
     /**
