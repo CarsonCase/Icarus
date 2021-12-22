@@ -4,19 +4,16 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "./IReserve.sol";
 
 // TokenBar is the coolest bar in town. You come in with some Token, and leave with more! The longer you stay, the more Token you get.
 //
 // This contract handles swapping to and from xToken, the staking token.
 contract SharePool is ERC20{
     IERC20 public token;
-    IReserve public reserve;
 
     // Define the Token token contract
-    constructor(address _token, address _reserve) ERC20("TokenBar", "xTOKEN"){
+    constructor(address _token) ERC20("Icarus Share Token","xOHM"){
         token = IERC20(_token);
-        reserve = IReserve(_reserve);
     }
 
     // Enter the bar. Pay some TOKENs. Earn some shares.
@@ -37,19 +34,17 @@ contract SharePool is ERC20{
         }
         // Lock the Token in the contract
         token.transferFrom(msg.sender, address(this), _amount);
-        reserve.stake(msg.sender, _amount);
     }
 
     // Leave the bar. Claim back your TOKENs.
     // Unlocks the staked + gained Token and burns xToken
-    function leave(uint256 _share) public {
+    function leave(uint256 _share) public virtual{
         // Gets the amount of xToken in existence
         uint256 totalShares = totalSupply();
         // Calculates the amount of Token the xToken is worth
         uint256 what = (_share * token.balanceOf(address(this))) / (totalShares);
         _burn(msg.sender, _share);
         token.transfer(msg.sender, what);
-        reserve.unstake(msg.sender, _share);
     }
 
 }

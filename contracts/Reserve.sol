@@ -4,15 +4,20 @@ import "./OlympusLink.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./IPriceOracle.sol";
+import "./SharePool.sol";
+
+interface IMintableERC20 is IERC20{
+    function mint(address,uint) external;
+    function burn(address,uint) external;
+}
 
 /**
 * @title Reserve
 * @author Carson Case (carsonpcase@gmail.com)
 * @dev Reserve contract stakes and swaps OHM. Also issues bOHM and share tokens
  */
-contract Reserve is OlympusLink, Ownable{
+contract Reserve is SharePool, OlympusLink, Ownable{
     uint constant ONE_HUNDRED_PERCENT = 10**50;
-    address token = address(0); // For now
 
     uint stakedAmount = 0;
     uint AStaked = 0;
@@ -22,7 +27,7 @@ contract Reserve is OlympusLink, Ownable{
     address public sharePool;
     IPriceOracle public priceOracle;
 
-    constructor(address _olympus, address _priceOracle) OlympusLink(_olympus) Ownable(){
+    constructor(address _olympus, address _priceOracle) SharePool(address(0)) OlympusLink(_olympus) Ownable(){
         priceOracle = IPriceOracle(_priceOracle);
     }
 
@@ -36,36 +41,43 @@ contract Reserve is OlympusLink, Ownable{
 
     /**
     * @dev stake in the reserve with either bOHM of sharePool
-    * TODO Change this. Enter for both pools in this contract and simply call mint in the others
      */
-    function stake(address _staker, uint _amount) external{
-        uint toStake = _amount / priceOracle.getPriceOHM();
-        require(beforeStake(), "There is not enough funds in shrae pool to insure this deposit");
-        if(msg.sender == bOHM){
-            // ratio of A/B determines if there is room to enter A
-            AStaked += toStake;
-            _stake(toStake);
-        }else if(msg.sender == sharePool){
-            BStaked += toStake;
-            _stake(toStake);
+    function stake(bool _bOHM, address _staker, uint _amountStable) external{
+        uint toStakeOHM = _amountStable / priceOracle.getPriceOHM();
+        require(beforeStake(), "There is not enough funds in share pool to insure this deposit");
+        if(_bOHM){
+            uint bOHMTokens = _amountStable / priceOracle.basePrice();
+            IMintableERC20(bOHM).mint(msg.sender, bOHMTokens);
+            AStaked += toStakeOHM;
+            _stake(toStakeOHM);
         }else{
-            revert("Only bOHM or SharePool may call this function");
+            BStaked += toStakeOHM;
+            _stake(toStakeOHM);
         }
     }
 
-    function unstake(address _staker, uint _amount) external{
-        uint toUnStake = _amount / priceOracle.getPriceOHM();
+    // Leave the bar. Claim back your TOKENs.
+    // Unlocks the staked + gained Token and burns xToken
+    function leave(uint256 _share) public override{
+        // Gets the amount of xToken in existence
+        uint256 totalShares = totalSupply();
+        // Calculates the amount of Token the xToken is worth
+
+        uint256 totalStableVal =  stakedAmount * priceOracle.getPriceOHM();
+        uint256 totalbOHMVal = IERC20(bOHM).totalSupply();
+        uint256 stableShare = (_share * totalStableVal - totalbOHMVal / (totalShares));
+        _burn(msg.sender, _share);
+
+        // unstake the tokens and swap to send
+        uint toUnStakeOHM = stableShare / priceOracle.getPriceOHM();
+        BStaked -= toUnStakeOHM;
+        _unstake(toUnStakeOHM);
+        // SWAP for stable here
+        token.transfer(msg.sender, token.balanceOf(address(this)));
+
         require(beforeStake(), "You are removing too many funds. This causes problems with the system. Please understand :/");
-        if(msg.sender == bOHM){
-            _unstake(toUnStake); 
-            AStaked -= toUnStake;          
-        }else if(msg.sender == sharePool){
-            BStaked -= toUnStake;      
-            _unstake(toUnStake);
-        }else{
-            revert("Only bOHM or SharePool may call this function");
-        }
     }
+
 
     function getRatioVars() public returns(uint,uint,uint){
             // A_b = Value of all bOHM at current base price
@@ -76,6 +88,7 @@ contract Reserve is OlympusLink, Ownable{
             uint B = BStaked * priceOracle.basePrice();
             return(A,B,A_b);
     }
+
     function beforeStake() public returns(bool){
             (uint A, uint B, uint A_b) = getRatioVars();
             if(B >= A_b || ONE_HUNDRED_PERCENT < (ONE_HUNDRED_PERCENT/10000)/A_b - B){
