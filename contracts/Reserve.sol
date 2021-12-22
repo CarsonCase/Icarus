@@ -42,18 +42,19 @@ contract Reserve is SharePool, OlympusLink, Ownable{
     /**
     * @dev stake in the reserve with either bOHM of sharePool
      */
-    function stake(bool _bOHM, address _staker, uint _amountStable) external{
+    function bOHMSstake(bool _bOHM, address _staker, uint _amountStable) external{
         uint toStakeOHM = _amountStable / priceOracle.getPriceOHM();
-        require(beforeStake(), "There is not enough funds in share pool to insure this deposit");
-        if(_bOHM){
-            uint bOHMTokens = _amountStable / priceOracle.basePrice();
-            IMintableERC20(bOHM).mint(msg.sender, bOHMTokens);
-            AStaked += toStakeOHM;
-            _stake(toStakeOHM);
-        }else{
-            BStaked += toStakeOHM;
-            _stake(toStakeOHM);
-        }
+        uint bOHMTokens = _amountStable / priceOracle.basePrice();
+        IMintableERC20(bOHM).mint(msg.sender, bOHMTokens);
+        AStaked += toStakeOHM;
+        _stake(toStakeOHM);
+    }
+
+    function enter(uint256 _amountStable) public override{
+        uint toStakeOHM = _amountStable / priceOracle.getPriceOHM();
+        super.enter(_amountStable);
+        BStaked += toStakeOHM;
+        _stake(toStakeOHM);
     }
 
     // Leave the bar. Claim back your TOKENs.
@@ -75,7 +76,7 @@ contract Reserve is SharePool, OlympusLink, Ownable{
         // SWAP for stable here
         token.transfer(msg.sender, token.balanceOf(address(this)));
 
-        require(beforeStake(), "You are removing too many funds. This causes problems with the system. Please understand :/");
+        require(stakeCheck(), "You are removing too many funds. This causes problems with the system. Please understand :/");
     }
 
 
@@ -89,7 +90,7 @@ contract Reserve is SharePool, OlympusLink, Ownable{
             return(A,B,A_b);
     }
 
-    function beforeStake() public returns(bool){
+    function stakeCheck() public returns(bool){
             (uint A, uint B, uint A_b) = getRatioVars();
             if(B >= A_b || ONE_HUNDRED_PERCENT < (ONE_HUNDRED_PERCENT/10000)/A_b - B){
                 A_APR = ONE_HUNDRED_PERCENT;
@@ -104,6 +105,7 @@ contract Reserve is SharePool, OlympusLink, Ownable{
     }
 
     function _beforeStake(uint _amount) internal override{
+        require(stakeCheck(), "There is not enough funds in share pool to insure this deposit");
         stakedAmount += _amount;
     }
 

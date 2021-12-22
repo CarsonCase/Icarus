@@ -18,7 +18,7 @@ contract SharePool is ERC20{
 
     // Enter the bar. Pay some TOKENs. Earn some shares.
     // Locks Token and mints xToken
-    function enter(uint256 _amount) public {
+    function enter(uint256 _amount) public virtual{
         // Gets the amount of Token locked in the contract
         uint256 totalToken = token.balanceOf(address(this));
         // Gets the amount of xToken in existence
