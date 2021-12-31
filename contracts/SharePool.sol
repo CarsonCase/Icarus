@@ -8,7 +8,7 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 // TokenBar is the coolest bar in town. You come in with some Token, and leave with more! The longer you stay, the more Token you get.
 //
 // This contract handles swapping to and from xToken, the staking token.
-contract SharePool is ERC20{
+abstract contract SharePool is ERC20{
     IERC20 public token;
 
     // Define the Token token contract

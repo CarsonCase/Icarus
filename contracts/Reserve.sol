@@ -24,25 +24,23 @@ contract Reserve is SharePool, OlympusLink, Ownable{
     uint BStaked = 0;
     uint public A_APR = 0;
     address public bOHM;
-    address public sharePool;
     IPriceOracle public priceOracle;
 
-    constructor(address _olympus, address _priceOracle) SharePool(address(0)) OlympusLink(_olympus) Ownable(){
+    constructor(address _olympus, address _priceOracle, address _token) SharePool(_token) OlympusLink(_olympus) Ownable(){
         priceOracle = IPriceOracle(_priceOracle);
     }
 
     /**
     * @dev set bOHM and sharePool addresses
      */
-    function setAddresses(address _bOHM, address _sharePool) external onlyOwner(){
+    function init(address _bOHM) external onlyOwner(){
         bOHM = _bOHM;
-        sharePool = _sharePool;
     }
 
     /**
-    * @dev stake in the reserve with either bOHM of sharePool
+    * @dev stake in the reserve with bOHM
      */
-    function bOHMSstake(bool _bOHM, address _staker, uint _amountStable) external{
+    function bOHMSstake(address _staker, uint _amountStable) external{
         uint toStakeOHM = _amountStable / priceOracle.getPriceOHM();
         uint bOHMTokens = _amountStable / priceOracle.basePrice();
         IMintableERC20(bOHM).mint(msg.sender, bOHMTokens);
