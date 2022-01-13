@@ -21,6 +21,22 @@ async function deployContracts(){
     ];
 }
 
+async function getPadding(reserve){
+    let ratioVars = await reserve.getRatioVars();
+    return ethers.BigNumber.from(ratioVars[0]).add(ethers.BigNumber.from(ratioVars[1]).sub(ethers.BigNumber.from(ratioVars[2])));
+}
+
+function toWei(bn){
+    return bn.mul(ethers.BigNumber.from("1000000000000000000"));
+}
+
+function fromWei(bn){
+    return ethers.utils.parseEther(bn);
+}
+
 module.exports = {
-    deployContracts
+    deployContracts,
+    getPadding,
+    toWei,
+    fromWei
 }

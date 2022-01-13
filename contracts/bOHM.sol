@@ -18,18 +18,23 @@ contract bOHM is ERC20{
         require(msg.sender == reserve, "only reserve may call this function");
         _;
     }
-    // Not sure if I'll want this later
-    // /**
-    // * @dev function to enter the bOHM pool
-    // * mints as many bOHM tokens as there are bOHM represented
-    // * @param _user is the user to take funds from and mint bOHM to
-    // * @param _amount of token to send in
-    //  */
-    // function enter(address _user, uint _amount) external{
-    //     // send funds from user to reserve
-    //     
-    //     _mint(_user, tokens);
-    // }
+    
+    function balanceOf(address _user) public view override returns(uint256){
+        uint sBalUser = super.balanceOf(_user);
+        uint sBalThis = super.balanceOf(address(this));
+        uint sBalTotal = super.totalSupply();
+        if(sBalThis == 0){
+            return sBalUser;
+        }
+        // 100 in contract
+        // 200 in user
+        // 300 total
+        // should be 300 for user
+        return(sBalUser + 
+                (sBalThis * ( sBalTotal * sBalUser / (sBalTotal - sBalThis)) / sBalTotal)
+                );
+    }
+
     /**
     * @dev function to enter bOHM pool and receive tokens
     * @param _user is the user to mint

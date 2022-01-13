@@ -276,6 +276,7 @@
     "pinkie": "^2.0.4",
     "pinkie-promise": "^2.0.1",
     "postinstall-postinstall": "^2.1.0",
+    "prb-math": "^2.4.1",
     "prettier": "^2.5.1",
     "printj": "^1.1.2",
     "prr": "^1.0.1",

@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./IPriceOracle.sol";
 import "./SharePool.sol";
+import "prb-math/contracts/PRBMathUD60x18.sol";
 
 interface IMintableERC20 is IERC20{
     function mint(address,uint) external;
@@ -17,7 +18,9 @@ interface IMintableERC20 is IERC20{
 * @dev Reserve contract stakes and swaps OHM. Also issues bOHM and share tokens
  */
 contract Reserve is SharePool, OlympusLink, Ownable{
-    uint constant ONE_HUNDRED_PERCENT = 10**50;
+    using PRBMathUD60x18 for uint256;
+
+    uint public constant ONE_HUNDRED_PERCENT = 100 ether;
 
     uint stakedAmount = 0;
     uint AStaked = 0;
@@ -40,16 +43,16 @@ contract Reserve is SharePool, OlympusLink, Ownable{
     /**
     * @dev stake in the reserve with bOHM
      */
-    function bOHMSstake(address _staker, uint _amountStable) external{
-        uint toStakeOHM = _amountStable / priceOracle.getPriceOHM();
-        uint bOHMTokens = _amountStable / priceOracle.basePrice();
+    function bOHMStake(uint _amountStable) external{
+        uint toStakeOHM = 1 ether * _amountStable / priceOracle.getPriceOHM();
+        uint bOHMTokens = 1 ether * _amountStable / priceOracle.basePrice();
         IMintableERC20(bOHM).mint(msg.sender, bOHMTokens);
         AStaked += toStakeOHM;
         _stake(toStakeOHM);
     }
 
     function enter(uint256 _amountStable) public override{
-        uint toStakeOHM = _amountStable / priceOracle.getPriceOHM();
+        uint toStakeOHM = 1 ether * _amountStable / priceOracle.getPriceOHM();
         super.enter(_amountStable);
         BStaked += toStakeOHM;
         _stake(toStakeOHM);
@@ -78,23 +81,25 @@ contract Reserve is SharePool, OlympusLink, Ownable{
     }
 
 
-    function getRatioVars() public returns(uint,uint,uint){
-            // A_b = Value of all bOHM at current base price
-            // A = Value of all bOHM at market price
-            // B = Value of all of share pool at market price
-            uint A_b = IERC20(bOHM).totalSupply();
-            uint A = AStaked * priceOracle.basePrice();
-            uint B = BStaked * priceOracle.basePrice();
-            return(A,B,A_b);
+    function getRatioVars() public view returns(uint,uint,uint){
+        // A_b = Value of all bOHM at current base price
+        // A = Value of all bOHM at market price
+        // B = Value of all of share pool at market price
+        uint A_b = IERC20(bOHM).totalSupply();
+        uint marketPrice = priceOracle.getPriceOHM();
+        uint A = AStaked * marketPrice;
+        uint B = BStaked * marketPrice;
+        return(A,B,A_b);
     }
 
     function stakeCheck() public returns(bool){
             (uint A, uint B, uint A_b) = getRatioVars();
-            if(B >= A_b || ONE_HUNDRED_PERCENT < (ONE_HUNDRED_PERCENT/10000)/A_b - B){
-                A_APR = ONE_HUNDRED_PERCENT;
-            }else{
-                A_APR = (ONE_HUNDRED_PERCENT/10000)/A_b - B;
-            }
+            // rebase bOHM according to last A_APR
+            /// TODO make this actually based on time
+            IMintableERC20(bOHM).mint(bOHM, A_APR*IMintableERC20(bOHM).totalSupply()/ONE_HUNDRED_PERCENT);
+            // update new APR
+            A_APR = (((A+B) - A_b).ln());
+            
             return(A+B >= A_b);
     }
 
